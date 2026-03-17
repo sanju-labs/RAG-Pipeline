@@ -96,18 +96,19 @@ section[data-testid="stSidebar"] code {
 .stSpinner > div { border-top-color: #6c63ff !important; }
 .stAlert { background: #0f0f1c !important; border: 1px solid #1c1c30 !important; border-radius: 10px !important; }
 
-/* ── Mobile expander ── */
-[data-testid="stExpander"] {
-    background: #0f0f1c !important; border: 1px solid #1c1c30 !important;
-    border-radius: 12px !important; margin-bottom: 10px !important;
+/* ── Sidebar toggle arrow ── */
+.sidebar-toggle {
+    position: fixed; top: 50%; left: 0;
+    transform: translateY(-50%);
+    z-index: 999999;
+    background: #1a1a2e; border: 1px solid #23233a;
+    border-left: none; border-radius: 0 8px 8px 0;
+    width: 22px; height: 56px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: background 0.2s;
 }
-[data-testid="stExpander"] summary {
-    color: #e4e4ec !important; font-size: 14px !important; font-weight: 500 !important;
-}
-[data-testid="stExpander"] summary:hover { color: #a78bfa !important; }
-@media (min-width: 768px) {
-    .mobile-only { display: none !important; }
-}
+.sidebar-toggle:hover { background: #23233a; }
+.sidebar-toggle span { color: #a78bfa; font-size: 13px; line-height: 1; }
 </style>
 """
 st.markdown(STYLES, unsafe_allow_html=True)
@@ -127,15 +128,17 @@ if st.session_state.rag is None:
         except Exception as e:
             st.error(f"Failed to initialize: {e}")
 
-# ── Shared render functions ───────────────────────────────────────────
+# ── Sidebar ───────────────────────────────────────────────────────────
 
-def render_file_uploader(container):
-    with container:
+
+with st.sidebar:
+    st.markdown("### ⚙️ Setup")
+    if st.session_state.rag:
+        st.markdown("---")
         st.markdown("### 📁 Drop your files")
         files = st.file_uploader(
             "Drag & drop here", type=cfg.SUPPORTED_TYPES,
-            accept_multiple_files=True, label_visibility="collapsed",
-            key="uploader_mobile" if container != st.sidebar else "uploader_sidebar"
+            accept_multiple_files=True, label_visibility="collapsed"
         )
         if files:
             for f in files:
@@ -155,14 +158,9 @@ def render_file_uploader(container):
             stats = st.session_state.rag.get_stats()
             st.caption(f"📊 {stats['doc_chunks']} chunks · {stats['cached_queries']} cached")
 
-
-def render_bts(container):
-    with container:
         st.markdown("---")
-        bts_on = st.toggle(
-            "🚀 Curious about BTS? Click to explore!",
-            key="bts_mobile" if container != st.sidebar else "bts_sidebar"
-        )
+        bts_on = st.toggle("🚀 Curious about BTS? Click to explore!")
+
         if bts_on and st.session_state.last_bts:
             b = st.session_state.last_bts
             st.markdown("#### 🔍 Behind The Scenes")
@@ -238,37 +236,57 @@ def render_bts(container):
         elif bts_on:
             st.caption("Ask a question first — the breakdown will appear here.")
 
-
-# ── Sidebar (desktop) ─────────────────────────────────────────────────
-
-with st.sidebar:
-    st.markdown("### ⚙️ Setup")
-    if st.session_state.rag:
-        st.markdown("---")
-        render_file_uploader(st.sidebar)
-        render_bts(st.sidebar)
     else:
         st.info("RAG engine not initialized. Check your OPENAI_API_KEY in .env.")
 
-# ── Main Chat ────────────────────────────────────────────────────────
+# ── Arrow toggle (fixed, works on desktop & mobile) ───────────────────
+st.markdown("""
+<div class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">
+    <span id="toggleArrow">‹</span>
+</div>
+<script>
+(function() {
+    function getSidebar() {
+        return window.parent.document.querySelector('[data-testid="stSidebar"]');
+    }
+    function getArrow() {
+        return window.parent.document.getElementById('toggleArrow');
+    }
+
+    window.toggleSidebar = function() {
+        var sidebar = getSidebar();
+        if (!sidebar) return;
+        var isOpen = window.parent.getComputedStyle(sidebar).marginLeft === '0px';
+        sidebar.style.transition = 'margin-left 0.3s ease';
+        if (isOpen) {
+            sidebar.style.marginLeft = '-' + sidebar.offsetWidth + 'px';
+            var a = getArrow(); if (a) a.textContent = '›';
+        } else {
+            sidebar.style.marginLeft = '0px';
+            var a = getArrow(); if (a) a.textContent = '‹';
+        }
+    };
+
+    // Sync arrow on every load/rerun
+    function syncArrow() {
+        var sidebar = getSidebar();
+        var arrow = getArrow();
+        if (!sidebar || !arrow) { setTimeout(syncArrow, 200); return; }
+        var ml = window.parent.getComputedStyle(sidebar).marginLeft;
+        arrow.textContent = (ml === '0px' || ml === '') ? '‹' : '›';
+    }
+    setTimeout(syncArrow, 400);
+})();
+</script>
+""", unsafe_allow_html=True)
+
+# ── Main Chat ─────────────────────────────────────────────────────────
 
 if not st.session_state.messages:
     st.markdown("""<div class="hero">
         <h1>Hi, I'm Bing!</h1>
-        <p>Drop your documents below, then ask me anything</p>
+        <p>Drop your documents in the sidebar, then ask me anything</p>
     </div>""", unsafe_allow_html=True)
-
-# ── Mobile controls (visible only on small screens via CSS) ───────────
-st.markdown('<div class="mobile-only">', unsafe_allow_html=True)
-if st.session_state.rag:
-    with st.expander("⚙️ Setup — Upload files & explore BTS", expanded=not st.session_state.ingested):
-        render_file_uploader(st)
-        render_bts(st)
-else:
-    st.warning("RAG engine not initialized. Check your OPENAI_API_KEY in Streamlit secrets.")
-st.markdown('</div>', unsafe_allow_html=True)
-
-# ── Chat messages ─────────────────────────────────────────────────────
 
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"], avatar="🧑" if msg["role"] == "user" else "🤖"):
@@ -282,7 +300,7 @@ if question := st.chat_input("Ask me anything..."):
     if not st.session_state.rag:
         answer = "OpenAI API key not found. Please set OPENAI_API_KEY in your .env file."
     elif not st.session_state.ingested:
-        answer = "Upload at least one document first."
+        answer = "Upload at least one document in the sidebar first."
     else:
         with st.spinner(""):
             try:
