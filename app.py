@@ -6,13 +6,10 @@ import os
 import streamlit as st
 import config as cfg
 from rag_engine import MultimodalRAG
-from dotenv import load_dotenv
-
-load_dotenv()
 
 # ── Page Config ──────────────────────────────────────────────────────
 
-st.set_page_config(page_title="Bing", page_icon="🔮", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Bing", page_icon="🔮", layout="wide", initial_sidebar_state="expanded")
 
 STYLES = """
 <style>
@@ -110,7 +107,7 @@ for k, v in defaults.items():
         st.session_state[k] = v
 
 if st.session_state.rag is None:
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = st.secrets.get("OPENAI_API_KEY") or os.getenv("OPENAI_API_KEY")
     if api_key:
         try:
             st.session_state.rag = MultimodalRAG(api_key)
