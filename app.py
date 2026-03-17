@@ -9,7 +9,7 @@ from rag_engine import MultimodalRAG
 
 # ── Page Config ──────────────────────────────────────────────────────
 
-st.set_page_config(page_title="Bing", page_icon="🔮", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Bing", page_icon="🔮", layout="wide", initial_sidebar_state="auto")
 
 STYLES = """
 <style>
@@ -95,6 +95,19 @@ section[data-testid="stSidebar"] code {
 }
 .stSpinner > div { border-top-color: #6c63ff !important; }
 .stAlert { background: #0f0f1c !important; border: 1px solid #1c1c30 !important; border-radius: 10px !important; }
+
+/* ── Mobile expander ── */
+[data-testid="stExpander"] {
+    background: #0f0f1c !important; border: 1px solid #1c1c30 !important;
+    border-radius: 12px !important; margin-bottom: 10px !important;
+}
+[data-testid="stExpander"] summary {
+    color: #e4e4ec !important; font-size: 14px !important; font-weight: 500 !important;
+}
+[data-testid="stExpander"] summary:hover { color: #a78bfa !important; }
+@media (min-width: 768px) {
+    .mobile-only { display: none !important; }
+}
 </style>
 """
 st.markdown(STYLES, unsafe_allow_html=True)
@@ -114,17 +127,15 @@ if st.session_state.rag is None:
         except Exception as e:
             st.error(f"Failed to initialize: {e}")
 
-# ── Sidebar ──────────────────────────────────────────────────────────
+# ── Shared render functions ───────────────────────────────────────────
 
-with st.sidebar:
-    st.markdown("### ⚙️ Setup")
-
-    if st.session_state.rag:
-        st.markdown("---")
+def render_file_uploader(container):
+    with container:
         st.markdown("### 📁 Drop your files")
         files = st.file_uploader(
             "Drag & drop here", type=cfg.SUPPORTED_TYPES,
-            accept_multiple_files=True, label_visibility="collapsed"
+            accept_multiple_files=True, label_visibility="collapsed",
+            key="uploader_mobile" if container != st.sidebar else "uploader_sidebar"
         )
         if files:
             for f in files:
@@ -140,20 +151,22 @@ with st.sidebar:
                                 st.warning(result["error"])
                         except Exception as e:
                             st.error(f"Error processing {f.name}: {e}")
-
         if st.session_state.ingested:
             stats = st.session_state.rag.get_stats()
             st.caption(f"📊 {stats['doc_chunks']} chunks · {stats['cached_queries']} cached")
 
-        # ── BTS Toggle ───────────────────────────────────────────────
-        st.markdown("---")
-        bts_on = st.toggle("🚀 Curious about BTS? Click to explore!")
 
+def render_bts(container):
+    with container:
+        st.markdown("---")
+        bts_on = st.toggle(
+            "🚀 Curious about BTS? Click to explore!",
+            key="bts_mobile" if container != st.sidebar else "bts_sidebar"
+        )
         if bts_on and st.session_state.last_bts:
             b = st.session_state.last_bts
             st.markdown("#### 🔍 Behind The Scenes")
 
-            # 1 — Query
             st.markdown(f"""<div class="bts-box">
             <span class="bts-tag">STEP 1 · YOUR QUERY</span><br>
             <strong>"{b['query']}"</strong><br>
@@ -162,7 +175,6 @@ with st.sidebar:
             </div>""", unsafe_allow_html=True)
 
             if b.get("cache_hit"):
-                # Cache hit
                 st.markdown(f"""<div class="bts-box">
                 <span class="bts-tag">STEP 2 · CACHE HIT ⚡</span><br>
                 A nearly identical question was asked before!<br>
@@ -171,7 +183,6 @@ with st.sidebar:
                 The cached answer was returned instantly — <strong>zero LLM cost, zero search time</strong>.
                 </div>""", unsafe_allow_html=True)
             else:
-                # 2 — Embedding
                 st.markdown(f"""<div class="bts-box">
                 <span class="bts-tag">STEP 2 · EMBEDDING YOUR QUERY</span><br>
                 Your question was converted into a <strong>{b['embedding_dim']}-dimension vector</strong>
@@ -180,14 +191,12 @@ with st.sidebar:
                 how "close" your question is to each stored chunk.
                 </div>""", unsafe_allow_html=True)
 
-                # 3 — Cache miss
                 st.markdown(f"""<div class="bts-box">
                 <span class="bts-tag">STEP 3 · CACHE CHECK</span><br>
                 Searched the semantic cache — <strong>no similar past query found</strong>.
                 Proceeding to full hybrid search.
                 </div>""", unsafe_allow_html=True)
 
-                # 4 — Hybrid search
                 st.markdown(f"""<div class="bts-box">
                 <span class="bts-tag">STEP 4 · HYBRID SEARCH</span><br>
                 Searched <strong>{b.get('total_chunks_in_db', '?')}</strong> total chunks using two methods:<br><br>
@@ -201,7 +210,6 @@ with st.sidebar:
                 <code>score = {b['semantic_weight']}×semantic + {b['bm25_weight']}×bm25</code>
                 </div>""", unsafe_allow_html=True)
 
-                # 5 — Top K
                 scores_html = ""
                 for i, s in enumerate(b.get("scores", [])):
                     preview = b.get("chunk_previews", [""])[i][:55] if i < len(b.get("chunk_previews", [])) else ""
@@ -217,7 +225,6 @@ with st.sidebar:
                 Sources: <strong>{', '.join(b.get('sources', ['?']))}</strong>
                 </div>""", unsafe_allow_html=True)
 
-                # 6 — LLM
                 st.markdown(f"""<div class="bts-box">
                 <span class="bts-tag">STEP 6 · LLM GENERATION</span><br>
                 The top <strong>{b.get('num_retrieved', '?')}</strong> chunks
@@ -231,6 +238,15 @@ with st.sidebar:
         elif bts_on:
             st.caption("Ask a question first — the breakdown will appear here.")
 
+
+# ── Sidebar (desktop) ─────────────────────────────────────────────────
+
+with st.sidebar:
+    st.markdown("### ⚙️ Setup")
+    if st.session_state.rag:
+        st.markdown("---")
+        render_file_uploader(st.sidebar)
+        render_bts(st.sidebar)
     else:
         st.info("RAG engine not initialized. Check your OPENAI_API_KEY in .env.")
 
@@ -239,8 +255,20 @@ with st.sidebar:
 if not st.session_state.messages:
     st.markdown("""<div class="hero">
         <h1>Hi, I'm Bing!</h1>
-        <p>Drop your documents in the sidebar, then ask me anything</p>
+        <p>Drop your documents below, then ask me anything</p>
     </div>""", unsafe_allow_html=True)
+
+# ── Mobile controls (visible only on small screens via CSS) ───────────
+st.markdown('<div class="mobile-only">', unsafe_allow_html=True)
+if st.session_state.rag:
+    with st.expander("⚙️ Setup — Upload files & explore BTS", expanded=not st.session_state.ingested):
+        render_file_uploader(st)
+        render_bts(st)
+else:
+    st.warning("RAG engine not initialized. Check your OPENAI_API_KEY in Streamlit secrets.")
+st.markdown('</div>', unsafe_allow_html=True)
+
+# ── Chat messages ─────────────────────────────────────────────────────
 
 for msg in st.session_state.messages:
     with st.chat_message(msg["role"], avatar="🧑" if msg["role"] == "user" else "🤖"):
@@ -254,7 +282,7 @@ if question := st.chat_input("Ask me anything..."):
     if not st.session_state.rag:
         answer = "OpenAI API key not found. Please set OPENAI_API_KEY in your .env file."
     elif not st.session_state.ingested:
-        answer = "Upload at least one document in the sidebar first."
+        answer = "Upload at least one document first."
     else:
         with st.spinner(""):
             try:
