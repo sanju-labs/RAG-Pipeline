@@ -7,9 +7,12 @@ import streamlit as st
 import config as cfg
 from rag_engine import MultimodalRAG
 
-# #── Page Config ──────────────────────────────────────────────────────
+# ── Page Config ───────────────────────────────────────────────────────
 
-st.set_page_config(page_title="Bing", page_icon="🔮", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(
+    page_title="Bing", page_icon="🔮",
+    layout="wide", initial_sidebar_state="expanded"
+)
 
 STYLES = """
 <style>
@@ -17,10 +20,119 @@ STYLES = """
 
 /* ── Reset ── */
 .stApp { background: #09090f; font-family: 'Inter', sans-serif; }
-header, .stDeployButton, #MainMenu, footer { display: none !important; }
+.stDeployButton, #MainMenu, footer { display: none !important; }
 [data-testid="stBottomBlockContainer"] { background: #09090f !important; }
+header[data-testid="stHeader"] { background: transparent !important; box-shadow: none !important; }
 
-/* ── Chat Input — floating pill ── */
+/* ── Sidebar ── */
+section[data-testid="stSidebar"] {
+    background: #0b0b14 !important;
+    border-right: 1px solid #181828 !important;
+}
+section[data-testid="stSidebar"] * { color: #b0b0c4 !important; font-size: 13.5px; }
+section[data-testid="stSidebar"] h1,
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] h3,
+section[data-testid="stSidebar"] strong { color: #e4e4ec !important; }
+section[data-testid="stSidebar"] hr { border-color: #1a1a2a !important; margin: 12px 0 !important; }
+section[data-testid="stSidebar"] code {
+    background: #16162a !important; color: #a78bfa !important;
+    padding: 1px 6px; border-radius: 4px; font-size: 12px;
+}
+
+/* ══════════════════════════════════════════════
+   SIDEBAR TOGGLE — pure CSS, no JS, no noise.
+   Streamlit renders two different buttons:
+   • stSidebarCollapseButton  → sidebar is OPEN  → shows ‹ (click to close)
+   • collapsedControl         → sidebar is CLOSED → shows › (click to open)
+   We reposition both into a matching edge tab.
+   ══════════════════════════════════════════════ */
+
+/* Sidebar is OPEN → collapse button sits at right edge of sidebar */
+[data-testid="stSidebarCollapseButton"] {
+    position: fixed !important;
+    top: 50vh !important;
+    left: 244px !important;
+    transform: translateY(-50%) !important;
+    z-index: 99999 !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: auto !important;
+    height: auto !important;
+}
+[data-testid="stSidebarCollapseButton"] > button {
+    background: #1a1a2e !important;
+    border: 1px solid #2e2e4a !important;
+    border-left: none !important;
+    border-radius: 0 10px 10px 0 !important;
+    width: 20px !important;
+    height: 52px !important;
+    min-width: 20px !important;
+    padding: 0 !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: none !important;
+    outline: none !important;
+}
+[data-testid="stSidebarCollapseButton"] > button:hover {
+    background: #252545 !important;
+}
+[data-testid="stSidebarCollapseButton"] > button svg {
+    display: none !important;
+}
+[data-testid="stSidebarCollapseButton"] > button::after {
+    content: '‹';
+    color: #a78bfa;
+    font-size: 20px;
+    font-weight: 300;
+    line-height: 1;
+    font-family: sans-serif;
+    display: block;
+}
+
+/* Sidebar is CLOSED → expand control sits at left edge of screen */
+[data-testid="collapsedControl"] {
+    position: fixed !important;
+    top: 50vh !important;
+    left: 0 !important;
+    transform: translateY(-50%) !important;
+    z-index: 99999 !important;
+    background: #1a1a2e !important;
+    border: 1px solid #2e2e4a !important;
+    border-left: none !important;
+    border-radius: 0 10px 10px 0 !important;
+    width: 20px !important;
+    height: 52px !important;
+    min-width: 20px !important;
+    padding: 0 !important;
+    cursor: pointer !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+}
+[data-testid="collapsedControl"]:hover {
+    background: #252545 !important;
+}
+[data-testid="collapsedControl"] svg {
+    display: none !important;
+}
+[data-testid="collapsedControl"]::after {
+    content: '›';
+    color: #a78bfa;
+    font-size: 20px;
+    font-weight: 300;
+    line-height: 1;
+    font-family: sans-serif;
+    display: block;
+}
+
+/* ── Chat Input ── */
 [data-testid="stChatInput"] { max-width: 720px; margin: 0 auto; }
 [data-testid="stChatInput"] textarea {
     background: #131320 !important; border: 1px solid #23233a !important;
@@ -45,26 +157,21 @@ header, .stDeployButton, #MainMenu, footer { display: none !important; }
 }
 [data-testid="stChatMessage"] p { color: #cdcdd8 !important; font-size: 14.5px; line-height: 1.7; }
 
-/* ── Sidebar ── */
-section[data-testid="stSidebar"] { background: #0b0b14 !important; border-right: 1px solid #181828 !important; }
-section[data-testid="stSidebar"] * { color: #b0b0c4 !important; font-size: 13.5px; }
-section[data-testid="stSidebar"] h1, section[data-testid="stSidebar"] h2,
-section[data-testid="stSidebar"] h3, section[data-testid="stSidebar"] strong { color: #e4e4ec !important; }
-section[data-testid="stSidebar"] hr { border-color: #1a1a2a !important; margin: 12px 0 !important; }
-section[data-testid="stSidebar"] code {
-    background: #16162a !important; color: #a78bfa !important;
-    padding: 1px 6px; border-radius: 4px; font-size: 12px;
-}
-
-/* ── Upload ── */
+/* ── File Uploader ── */
 [data-testid="stFileUploader"] { border-radius: 12px !important; }
-[data-testid="stFileUploader"] section { background: #0f0f1c !important; border: 1px dashed #23233a !important; border-radius: 12px !important; padding: 16px !important; }
-[data-testid="stFileUploader"] button { background: #6c63ff !important; color: #fff !important; border-radius: 8px !important; font-size: 12px !important; }
+[data-testid="stFileUploader"] section {
+    background: #0f0f1c !important; border: 1px dashed #23233a !important;
+    border-radius: 12px !important; padding: 16px !important;
+}
+[data-testid="stFileUploader"] button {
+    background: #6c63ff !important; color: #fff !important;
+    border-radius: 8px !important; font-size: 12px !important;
+}
 
 /* ── Toggle ── */
 [data-testid="stToggle"] label span { color: #a78bfa !important; font-weight: 500; font-size: 13px !important; }
 
-/* ── BTS ── */
+/* ── BTS boxes ── */
 .bts-box {
     background: #0f0f1c; border: 1px solid #1c1c30; border-radius: 10px;
     padding: 13px 15px; margin: 7px 0; font-size: 12.5px; line-height: 1.65; color: #b0b0c4;
@@ -76,7 +183,7 @@ section[data-testid="stSidebar"] code {
     font-weight: 600; letter-spacing: 0.5px; margin-bottom: 5px;
 }
 
-/* ── Title ── */
+/* ── Hero title ── */
 .hero { text-align: center; padding: 80px 20px 20px; }
 .hero h1 {
     font-size: 2.8rem; font-weight: 600; margin: 0;
@@ -99,7 +206,7 @@ section[data-testid="stSidebar"] code {
 """
 st.markdown(STYLES, unsafe_allow_html=True)
 
-# ── Session Init ─────────────────────────────────────────────────────
+# ── Session Init ──────────────────────────────────────────────────────
 
 defaults = {"messages": [], "rag": None, "ingested": [], "last_bts": None}
 for k, v in defaults.items():
@@ -114,7 +221,7 @@ if st.session_state.rag is None:
         except Exception as e:
             st.error(f"Failed to initialize: {e}")
 
-# ── Sidebar ──────────────────────────────────────────────────────────
+# ── Sidebar ───────────────────────────────────────────────────────────
 
 with st.sidebar:
     st.markdown("### ⚙️ Setup")
@@ -145,7 +252,6 @@ with st.sidebar:
             stats = st.session_state.rag.get_stats()
             st.caption(f"📊 {stats['doc_chunks']} chunks · {stats['cached_queries']} cached")
 
-        # ── BTS Toggle ───────────────────────────────────────────────
         st.markdown("---")
         bts_on = st.toggle("🚀 Curious about BTS? Click to explore!")
 
@@ -153,7 +259,6 @@ with st.sidebar:
             b = st.session_state.last_bts
             st.markdown("#### 🔍 Behind The Scenes")
 
-            # 1 — Query
             st.markdown(f"""<div class="bts-box">
             <span class="bts-tag">STEP 1 · YOUR QUERY</span><br>
             <strong>"{b['query']}"</strong><br>
@@ -162,7 +267,6 @@ with st.sidebar:
             </div>""", unsafe_allow_html=True)
 
             if b.get("cache_hit"):
-                # Cache hit
                 st.markdown(f"""<div class="bts-box">
                 <span class="bts-tag">STEP 2 · CACHE HIT ⚡</span><br>
                 A nearly identical question was asked before!<br>
@@ -171,7 +275,6 @@ with st.sidebar:
                 The cached answer was returned instantly — <strong>zero LLM cost, zero search time</strong>.
                 </div>""", unsafe_allow_html=True)
             else:
-                # 2 — Embedding
                 st.markdown(f"""<div class="bts-box">
                 <span class="bts-tag">STEP 2 · EMBEDDING YOUR QUERY</span><br>
                 Your question was converted into a <strong>{b['embedding_dim']}-dimension vector</strong>
@@ -180,14 +283,12 @@ with st.sidebar:
                 how "close" your question is to each stored chunk.
                 </div>""", unsafe_allow_html=True)
 
-                # 3 — Cache miss
                 st.markdown(f"""<div class="bts-box">
                 <span class="bts-tag">STEP 3 · CACHE CHECK</span><br>
                 Searched the semantic cache — <strong>no similar past query found</strong>.
                 Proceeding to full hybrid search.
                 </div>""", unsafe_allow_html=True)
 
-                # 4 — Hybrid search
                 st.markdown(f"""<div class="bts-box">
                 <span class="bts-tag">STEP 4 · HYBRID SEARCH</span><br>
                 Searched <strong>{b.get('total_chunks_in_db', '?')}</strong> total chunks using two methods:<br><br>
@@ -201,7 +302,6 @@ with st.sidebar:
                 <code>score = {b['semantic_weight']}×semantic + {b['bm25_weight']}×bm25</code>
                 </div>""", unsafe_allow_html=True)
 
-                # 5 — Top K
                 scores_html = ""
                 for i, s in enumerate(b.get("scores", [])):
                     preview = b.get("chunk_previews", [""])[i][:55] if i < len(b.get("chunk_previews", [])) else ""
@@ -217,7 +317,6 @@ with st.sidebar:
                 Sources: <strong>{', '.join(b.get('sources', ['?']))}</strong>
                 </div>""", unsafe_allow_html=True)
 
-                # 6 — LLM
                 st.markdown(f"""<div class="bts-box">
                 <span class="bts-tag">STEP 6 · LLM GENERATION</span><br>
                 The top <strong>{b.get('num_retrieved', '?')}</strong> chunks
@@ -232,9 +331,9 @@ with st.sidebar:
             st.caption("Ask a question first — the breakdown will appear here.")
 
     else:
-        st.info("RAG engine not initialized. Check your OPENAI_API_KEY in .env.")
+        st.info("RAG engine not initialized. Check your OPENAI_API_KEY in Streamlit secrets.")
 
-# ── Main Chat ────────────────────────────────────────────────────────
+# ── Main Chat ─────────────────────────────────────────────────────────
 
 if not st.session_state.messages:
     st.markdown("""<div class="hero">
@@ -252,7 +351,7 @@ if question := st.chat_input("Ask me anything..."):
         st.markdown(question)
 
     if not st.session_state.rag:
-        answer = "OpenAI API key not found. Please set OPENAI_API_KEY in your .env file."
+        answer = "OpenAI API key not found. Please set OPENAI_API_KEY in your Streamlit secrets."
     elif not st.session_state.ingested:
         answer = "Upload at least one document in the sidebar first."
     else:
