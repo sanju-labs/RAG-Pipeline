@@ -96,22 +96,37 @@ section[data-testid="stSidebar"] code {
 .stSpinner > div { border-top-color: #6c63ff !important; }
 .stAlert { background: #0f0f1c !important; border: 1px solid #1c1c30 !important; border-radius: 10px !important; }
 
-/* ── Sidebar toggle arrow ── */
-[data-testid="collapsedControl"],
-[data-testid="stSidebarCollapseButton"] { display: none !important; }
-
-.sidebar-toggle {
-    position: fixed; top: 50%; left: 0;
-    transform: translateY(-50%);
-    z-index: 999999;
-    background: #1a1a2e; border: 1px solid #23233a;
-    border-left: none; border-radius: 0 8px 8px 0;
-    width: 22px; height: 56px;
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; transition: background 0.2s;
+/* ── Sidebar toggle — restyle Streamlit's native button ── */
+[data-testid="collapsedControl"] {
+    position: fixed !important; top: 50% !important; left: 0 !important;
+    transform: translateY(-50%) !important;
+    z-index: 999999 !important;
+    background: #1a1a2e !important; border: 1px solid #23233a !important;
+    border-left: none !important; border-radius: 0 8px 8px 0 !important;
+    width: 22px !important; height: 56px !important;
+    display: flex !important; align-items: center !important; justify-content: center !important;
+    margin: 0 !important; padding: 0 !important;
 }
-.sidebar-toggle:hover { background: #23233a; }
-.sidebar-toggle span { color: #a78bfa; font-size: 13px; line-height: 1; }
+[data-testid="collapsedControl"]:hover { background: #23233a !important; }
+[data-testid="collapsedControl"] svg { display: none !important; }
+[data-testid="collapsedControl"]::after {
+    content: '›'; color: #a78bfa; font-size: 16px; line-height: 1;
+}
+[data-testid="stSidebarCollapseButton"] button {
+    position: fixed !important; top: 50% !important; left: 0 !important;
+    transform: translateY(-50%) !important;
+    z-index: 999999 !important;
+    background: #1a1a2e !important; border: 1px solid #23233a !important;
+    border-left: none !important; border-radius: 0 8px 8px 0 !important;
+    width: 22px !important; height: 56px !important;
+    display: flex !important; align-items: center !important; justify-content: center !important;
+    margin: 0 !important; padding: 0 !important;
+}
+[data-testid="stSidebarCollapseButton"] button:hover { background: #23233a !important; }
+[data-testid="stSidebarCollapseButton"] button svg { display: none !important; }
+[data-testid="stSidebarCollapseButton"] button::after {
+    content: '‹'; color: #a78bfa; font-size: 16px; line-height: 1;
+}
 </style>
 """
 st.markdown(STYLES, unsafe_allow_html=True)
@@ -241,24 +256,6 @@ with st.sidebar:
 
     else:
         st.info("RAG engine not initialized. Check your OPENAI_API_KEY in .env.")
-
-# ── Arrow toggle (clicks Streamlit's native sidebar button) ──────────
-st.markdown("""
-<div class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">
-    <span id="toggleArrow">‹</span>
-</div>
-<script>
-function toggleSidebar() {
-    var btn = window.parent.document.querySelector('[data-testid="collapsedControl"]') ||
-              window.parent.document.querySelector('[data-testid="stSidebarCollapseButton"] button') ||
-              window.parent.document.querySelector('button[kind="header"]');
-    if (btn) btn.click();
-
-    var arrow = window.parent.document.getElementById('toggleArrow');
-    if (arrow) arrow.textContent = arrow.textContent === '‹' ? '›' : '‹';
-}
-</script>
-""", unsafe_allow_html=True)
 
 # ── Main Chat ─────────────────────────────────────────────────────────
 
