@@ -9,7 +9,7 @@ from rag_engine import MultimodalRAG
 
 # ── Page Config ──────────────────────────────────────────────────────
 
-st.set_page_config(page_title="Bing", page_icon="🔮", layout="wide", initial_sidebar_state="auto")
+st.set_page_config(page_title="Bing", page_icon="🔮", layout="wide", initial_sidebar_state="expanded")
 
 STYLES = """
 <style>
@@ -95,38 +95,6 @@ section[data-testid="stSidebar"] code {
 }
 .stSpinner > div { border-top-color: #6c63ff !important; }
 .stAlert { background: #0f0f1c !important; border: 1px solid #1c1c30 !important; border-radius: 10px !important; }
-
-/* ── Sidebar toggle — restyle Streamlit's native button ── */
-[data-testid="collapsedControl"] {
-    position: fixed !important; top: 50% !important; left: 0 !important;
-    transform: translateY(-50%) !important;
-    z-index: 999999 !important;
-    background: #1a1a2e !important; border: 1px solid #23233a !important;
-    border-left: none !important; border-radius: 0 8px 8px 0 !important;
-    width: 22px !important; height: 56px !important;
-    display: flex !important; align-items: center !important; justify-content: center !important;
-    margin: 0 !important; padding: 0 !important;
-}
-[data-testid="collapsedControl"]:hover { background: #23233a !important; }
-[data-testid="collapsedControl"] svg { display: none !important; }
-[data-testid="collapsedControl"]::after {
-    content: '›'; color: #a78bfa; font-size: 16px; line-height: 1;
-}
-[data-testid="stSidebarCollapseButton"] button {
-    position: fixed !important; top: 50% !important; left: 0 !important;
-    transform: translateY(-50%) !important;
-    z-index: 999999 !important;
-    background: #1a1a2e !important; border: 1px solid #23233a !important;
-    border-left: none !important; border-radius: 0 8px 8px 0 !important;
-    width: 22px !important; height: 56px !important;
-    display: flex !important; align-items: center !important; justify-content: center !important;
-    margin: 0 !important; padding: 0 !important;
-}
-[data-testid="stSidebarCollapseButton"] button:hover { background: #23233a !important; }
-[data-testid="stSidebarCollapseButton"] button svg { display: none !important; }
-[data-testid="stSidebarCollapseButton"] button::after {
-    content: '‹'; color: #a78bfa; font-size: 16px; line-height: 1;
-}
 </style>
 """
 st.markdown(STYLES, unsafe_allow_html=True)
@@ -146,11 +114,11 @@ if st.session_state.rag is None:
         except Exception as e:
             st.error(f"Failed to initialize: {e}")
 
-# ── Sidebar ───────────────────────────────────────────────────────────
-
+# ── Sidebar ──────────────────────────────────────────────────────────
 
 with st.sidebar:
     st.markdown("### ⚙️ Setup")
+
     if st.session_state.rag:
         st.markdown("---")
         st.markdown("### 📁 Drop your files")
@@ -172,10 +140,12 @@ with st.sidebar:
                                 st.warning(result["error"])
                         except Exception as e:
                             st.error(f"Error processing {f.name}: {e}")
+
         if st.session_state.ingested:
             stats = st.session_state.rag.get_stats()
             st.caption(f"📊 {stats['doc_chunks']} chunks · {stats['cached_queries']} cached")
 
+        # ── BTS Toggle ───────────────────────────────────────────────
         st.markdown("---")
         bts_on = st.toggle("🚀 Curious about BTS? Click to explore!")
 
@@ -183,6 +153,7 @@ with st.sidebar:
             b = st.session_state.last_bts
             st.markdown("#### 🔍 Behind The Scenes")
 
+            # 1 — Query
             st.markdown(f"""<div class="bts-box">
             <span class="bts-tag">STEP 1 · YOUR QUERY</span><br>
             <strong>"{b['query']}"</strong><br>
@@ -191,6 +162,7 @@ with st.sidebar:
             </div>""", unsafe_allow_html=True)
 
             if b.get("cache_hit"):
+                # Cache hit
                 st.markdown(f"""<div class="bts-box">
                 <span class="bts-tag">STEP 2 · CACHE HIT ⚡</span><br>
                 A nearly identical question was asked before!<br>
@@ -199,6 +171,7 @@ with st.sidebar:
                 The cached answer was returned instantly — <strong>zero LLM cost, zero search time</strong>.
                 </div>""", unsafe_allow_html=True)
             else:
+                # 2 — Embedding
                 st.markdown(f"""<div class="bts-box">
                 <span class="bts-tag">STEP 2 · EMBEDDING YOUR QUERY</span><br>
                 Your question was converted into a <strong>{b['embedding_dim']}-dimension vector</strong>
@@ -207,12 +180,14 @@ with st.sidebar:
                 how "close" your question is to each stored chunk.
                 </div>""", unsafe_allow_html=True)
 
+                # 3 — Cache miss
                 st.markdown(f"""<div class="bts-box">
                 <span class="bts-tag">STEP 3 · CACHE CHECK</span><br>
                 Searched the semantic cache — <strong>no similar past query found</strong>.
                 Proceeding to full hybrid search.
                 </div>""", unsafe_allow_html=True)
 
+                # 4 — Hybrid search
                 st.markdown(f"""<div class="bts-box">
                 <span class="bts-tag">STEP 4 · HYBRID SEARCH</span><br>
                 Searched <strong>{b.get('total_chunks_in_db', '?')}</strong> total chunks using two methods:<br><br>
@@ -226,6 +201,7 @@ with st.sidebar:
                 <code>score = {b['semantic_weight']}×semantic + {b['bm25_weight']}×bm25</code>
                 </div>""", unsafe_allow_html=True)
 
+                # 5 — Top K
                 scores_html = ""
                 for i, s in enumerate(b.get("scores", [])):
                     preview = b.get("chunk_previews", [""])[i][:55] if i < len(b.get("chunk_previews", [])) else ""
@@ -241,6 +217,7 @@ with st.sidebar:
                 Sources: <strong>{', '.join(b.get('sources', ['?']))}</strong>
                 </div>""", unsafe_allow_html=True)
 
+                # 6 — LLM
                 st.markdown(f"""<div class="bts-box">
                 <span class="bts-tag">STEP 6 · LLM GENERATION</span><br>
                 The top <strong>{b.get('num_retrieved', '?')}</strong> chunks
@@ -257,7 +234,7 @@ with st.sidebar:
     else:
         st.info("RAG engine not initialized. Check your OPENAI_API_KEY in .env.")
 
-# ── Main Chat ─────────────────────────────────────────────────────────
+# ── Main Chat ────────────────────────────────────────────────────────
 
 if not st.session_state.messages:
     st.markdown("""<div class="hero">
