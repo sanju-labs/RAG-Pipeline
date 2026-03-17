@@ -7,7 +7,7 @@ import streamlit as st
 import config as cfg
 from rag_engine import MultimodalRAG
 
-# ── Page Config ──────────────────────────────────────────────────────
+# #── Page Config ──────────────────────────────────────────────────────
 
 st.set_page_config(page_title="Bing", page_icon="🔮", layout="wide", initial_sidebar_state="expanded")
 
