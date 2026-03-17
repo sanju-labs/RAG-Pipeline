@@ -1,0 +1,10 @@
+chroma_db/
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
