@@ -6,7 +6,7 @@ Open this file, tweak a number, restart the app. That's it.
 
 # ── LLM ──────────────────────────────────────────────────────────────
 LLM_MODEL = "gpt-4.1-mini"       # Options: "gpt-4.1-mini", "gpt-4.1", "gpt-4o", "gpt-4o-mini"
-LLM_TEMPERATURE = 0.1             # 0 = deterministic, 1 = creative
+LLM_TEMPERATURE = 0             # 0 = deterministic, 1 = creative
 LLM_MAX_TOKENS = 1024             # Max response length
 
 # ── Embeddings ───────────────────────────────────────────────────────

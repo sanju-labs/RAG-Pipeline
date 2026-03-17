@@ -2,9 +2,13 @@
 Multimodal RAG Chat — "Hi, I'm Bing!"
 """
 
+import os
 import streamlit as st
 import config as cfg
 from rag_engine import MultimodalRAG
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # ── Page Config ──────────────────────────────────────────────────────
 
@@ -105,17 +109,18 @@ for k, v in defaults.items():
     if k not in st.session_state:
         st.session_state[k] = v
 
-# ── Sidebar ──────────────────────────────────────────────────────────
-
-with st.sidebar:
-    st.markdown("### ⚙️ Setup")
-    api_key = st.text_input("OpenAI API Key", type="password", placeholder="sk-...")
-
-    if api_key and st.session_state.rag is None:
+if st.session_state.rag is None:
+    api_key = os.getenv("OPENAI_API_KEY")
+    if api_key:
         try:
             st.session_state.rag = MultimodalRAG(api_key)
         except Exception as e:
             st.error(f"Failed to initialize: {e}")
+
+# ── Sidebar ──────────────────────────────────────────────────────────
+
+with st.sidebar:
+    st.markdown("### ⚙️ Setup")
 
     if st.session_state.rag:
         st.markdown("---")
@@ -229,8 +234,8 @@ with st.sidebar:
         elif bts_on:
             st.caption("Ask a question first — the breakdown will appear here.")
 
-    elif not api_key:
-        st.info("Enter your OpenAI API key above to begin.")
+    else:
+        st.info("RAG engine not initialized. Check your OPENAI_API_KEY in .env.")
 
 # ── Main Chat ────────────────────────────────────────────────────────
 
@@ -250,7 +255,7 @@ if question := st.chat_input("Ask me anything..."):
         st.markdown(question)
 
     if not st.session_state.rag:
-        answer = "Enter your OpenAI API key in the sidebar to get started."
+        answer = "OpenAI API key not found. Please set OPENAI_API_KEY in your .env file."
     elif not st.session_state.ingested:
         answer = "Upload at least one document in the sidebar first."
     else:
