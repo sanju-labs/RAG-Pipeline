@@ -97,6 +97,9 @@ section[data-testid="stSidebar"] code {
 .stAlert { background: #0f0f1c !important; border: 1px solid #1c1c30 !important; border-radius: 10px !important; }
 
 /* ── Sidebar toggle arrow ── */
+[data-testid="collapsedControl"],
+[data-testid="stSidebarCollapseButton"] { display: none !important; }
+
 .sidebar-toggle {
     position: fixed; top: 50%; left: 0;
     transform: translateY(-50%);
@@ -239,44 +242,21 @@ with st.sidebar:
     else:
         st.info("RAG engine not initialized. Check your OPENAI_API_KEY in .env.")
 
-# ── Arrow toggle (fixed, works on desktop & mobile) ───────────────────
+# ── Arrow toggle (clicks Streamlit's native sidebar button) ──────────
 st.markdown("""
 <div class="sidebar-toggle" id="sidebarToggle" onclick="toggleSidebar()">
     <span id="toggleArrow">‹</span>
 </div>
 <script>
-(function() {
-    function getSidebar() {
-        return window.parent.document.querySelector('[data-testid="stSidebar"]');
-    }
-    function getArrow() {
-        return window.parent.document.getElementById('toggleArrow');
-    }
+function toggleSidebar() {
+    var btn = window.parent.document.querySelector('[data-testid="collapsedControl"]') ||
+              window.parent.document.querySelector('[data-testid="stSidebarCollapseButton"] button') ||
+              window.parent.document.querySelector('button[kind="header"]');
+    if (btn) btn.click();
 
-    window.toggleSidebar = function() {
-        var sidebar = getSidebar();
-        if (!sidebar) return;
-        var isOpen = window.parent.getComputedStyle(sidebar).marginLeft === '0px';
-        sidebar.style.transition = 'margin-left 0.3s ease';
-        if (isOpen) {
-            sidebar.style.marginLeft = '-' + sidebar.offsetWidth + 'px';
-            var a = getArrow(); if (a) a.textContent = '›';
-        } else {
-            sidebar.style.marginLeft = '0px';
-            var a = getArrow(); if (a) a.textContent = '‹';
-        }
-    };
-
-    // Sync arrow on every load/rerun
-    function syncArrow() {
-        var sidebar = getSidebar();
-        var arrow = getArrow();
-        if (!sidebar || !arrow) { setTimeout(syncArrow, 200); return; }
-        var ml = window.parent.getComputedStyle(sidebar).marginLeft;
-        arrow.textContent = (ml === '0px' || ml === '') ? '‹' : '›';
-    }
-    setTimeout(syncArrow, 400);
-})();
+    var arrow = window.parent.document.getElementById('toggleArrow');
+    if (arrow) arrow.textContent = arrow.textContent === '‹' ? '›' : '‹';
+}
 </script>
 """, unsafe_allow_html=True)
 
